@@ -104,7 +104,7 @@ const vrfWrapperAbi = [
  *   chain: "baseSepolia",
  *   privateKey: "0x...",
  * });
- * await client.createCoinFlipRoom({ betAmount: 1000000n });
+ * await client.createCoinFlipRoom({ betAmount: 1 }); // 1 USDC
  * ```
  */
 export class PeetBetClient {
@@ -112,6 +112,7 @@ export class PeetBetClient {
   private walletClient: WalletClient | null = null;
   private account: ReturnType<typeof privateKeyToAccount> | null = null;
   private chainConfig: PeetBetChainConfig;
+  private tokenDecimalsCache: number | null = null;
 
   /**
    * Create a new PeetBet client.
@@ -702,28 +703,25 @@ export class PeetBetClient {
    * @example
    * ```typescript
    * // Create a public 1 USDC room
-   * const { hash } = await client.createCoinFlipRoom({
-   *   betAmount: client.parseTokens("1"),
-   * });
-   * console.log("Room created! TX:", hash);
+   * await client.createCoinFlipRoom({ betAmount: 1 });
    *
-   * // Create a private room (share ID with friend)
-   * await client.createCoinFlipRoom({
-   *   betAmount: client.parseTokens("5"),
-   *   isPrivate: true,
-   * });
+   * // Create a 5 USDC private room (share ID with friend)
+   * await client.createCoinFlipRoom({ betAmount: 5, isPrivate: true });
    * ```
    */
   async createCoinFlipRoom(options: CreateRoomOptions): Promise<TransactionResult> {
     this.requireWallet();
 
     const functionName = options.isPrivate ? "createChallengeRoom" : "createRoom";
+    // Ensure decimals are cached, then convert simple number to contract units
+    await this.getTokenDecimals();
+    const betAmountUnits = this.parseTokens(options.betAmount.toString());
 
     const hash = await this.walletClient!.writeContract({
       address: this.contracts.coinFlipGame,
       abi: coinFlipGameAbi,
       functionName,
-      args: [options.betAmount],
+      args: [betAmountUnits],
       account: this.account!,
       chain: this.chainConfig.chain,
     });
@@ -1058,21 +1056,22 @@ export class PeetBetClient {
    *
    * @example
    * ```typescript
-   * // Create a 4-player dice game
-   * const { hash } = await client.createDiceRoom({
-   *   betAmount: client.parseTokens("1"),
-   *   maxPlayers: 4,
-   * });
+   * // Create a 4-player dice game with 5 USDC bet
+   * await client.createDiceRoom({ betAmount: 5, maxPlayers: 4 });
    * ```
    */
   async createDiceRoom(options: CreateDiceRoomOptions): Promise<TransactionResult> {
     this.requireWallet();
 
+    // Ensure decimals are cached, then convert simple number to contract units
+    await this.getTokenDecimals();
+    const betAmountUnits = this.parseTokens(options.betAmount.toString());
+
     const hash = await this.walletClient!.writeContract({
       address: this.contracts.diceGame,
       abi: diceGameAbi,
       functionName: "createRoom",
-      args: [options.betAmount, options.maxPlayers, options.isPrivate ?? false],
+      args: [betAmountUnits, options.maxPlayers, options.isPrivate ?? false],
       account: this.account!,
       chain: this.chainConfig.chain,
     });
@@ -1441,21 +1440,17 @@ export class PeetBetClient {
    * @example
    * ```typescript
    * // Create room and wait for result
-   * const { hash } = await client.createCoinFlipRoom({ betAmount: 1000000n });
+   * await client.createCoinFlipRoom({ betAmount: 1 });
    * const myRooms = await client.getPlayerCoinFlipWaitingRooms();
    * const roomId = myRooms[0];
    *
-   * console.log("Waiting for opponent and game result...");
    * const result = await client.waitForCoinFlipResult(roomId, {
    *   timeout: 300000, // 5 minutes max
    *   onProgress: (status) => console.log(status),
    * });
    *
-   * if (result.didIWin) {
-   *   console.log(`Victory! Won ${client.formatTokens(result.payout)} USDC`);
-   * } else {
-   *   console.log(`Defeat. Lost ${client.formatTokens(result.betAmount)} USDC`);
-   * }
+   * console.log(result.didIWin ? 'Won!' : 'Lost');
+   * console.log(result.summary);
    * ```
    */
   async waitForCoinFlipResult(
@@ -1645,8 +1640,9 @@ export class PeetBetClient {
 
   /**
    * Estimate the VRF (randomness) cost for joining a room.
-   * The SDK handles this automatically, but you can call it manually.
+   * The SDK handles this automatically with retry logic and proper gas buffers.
    *
+   * @param maxRetries - Maximum retry attempts (default: 3)
    * @returns VRF cost estimate with gas prices
    *
    * @example
@@ -1655,7 +1651,7 @@ export class PeetBetClient {
    * console.log(`VRF will cost ~${cost.cost} wei`);
    * ```
    */
-  async estimateVrfCost(): Promise<VrfCostEstimate> {
+  async estimateVrfCost(maxRetries = 3): Promise<VrfCostEstimate> {
     // Get callback gas limit from contract
     const callbackGasLimit = await this.publicClient.readContract({
       address: this.contracts.peerBetCore,
@@ -1673,29 +1669,60 @@ export class PeetBetClient {
       maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ?? 1500000000n; // 1.5 gwei default
     } catch {
       // Fallback if estimateFeesPerGas fails
-      const gasPrice = await this.publicClient.getGasPrice();
-      maxPriorityFeePerGas = 1500000000n; // 1.5 gwei
-      maxFeePerGas = gasPrice > maxPriorityFeePerGas ? gasPrice : maxPriorityFeePerGas;
+      try {
+        const gasPrice = await this.publicClient.getGasPrice();
+        maxPriorityFeePerGas = 1500000000n; // 1.5 gwei
+        maxFeePerGas = gasPrice > maxPriorityFeePerGas ? gasPrice : maxPriorityFeePerGas;
+      } catch {
+        // Last resort: use safe defaults for testnet
+        maxPriorityFeePerGas = 1500000000n; // 1.5 gwei
+        maxFeePerGas = 30000000000n; // 30 gwei - safe default
+      }
     }
 
     // Ensure maxFeePerGas >= maxPriorityFeePerGas (EIP-1559 requirement)
     let safeMaxFeePerGas = maxFeePerGas > maxPriorityFeePerGas ? maxFeePerGas : maxPriorityFeePerGas;
 
-    // Apply 40% buffer to account for gas price volatility
+    // Apply 40% buffer to account for gas price volatility between estimation and execution
+    // The excess ETH is refunded by the VRF wrapper after the callback completes
     safeMaxFeePerGas = (safeMaxFeePerGas * 140n) / 100n;
 
     const vrfWrapper = this.chainConfig.vrfWrapper;
 
-    // Call VRF wrapper with all 3 required arguments
-    const baseCost = await this.publicClient.readContract({
-      address: vrfWrapper,
-      abi: vrfWrapperAbi,
-      functionName: "estimateRequestPriceNative",
-      args: [callbackGasLimit, 1, safeMaxFeePerGas], // gasLimit, numWords (always 1), gasPriceWei
-    }) as bigint;
+    // Call VRF wrapper with retry logic (exponential backoff)
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const baseCost = await this.publicClient.readContract({
+          address: vrfWrapper,
+          abi: vrfWrapperAbi,
+          functionName: "estimateRequestPriceNative",
+          args: [callbackGasLimit, 1, safeMaxFeePerGas], // gasLimit, numWords (always 1), gasPriceWei
+        }) as bigint;
+
+        return {
+          cost: baseCost,
+          maxFeePerGas: safeMaxFeePerGas,
+          maxPriorityFeePerGas,
+        };
+      } catch {
+        // Retry on failure
+        if (attempt < maxRetries) {
+          // Exponential backoff: 500ms, 1000ms, 2000ms
+          const delay = 500 * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed - use fallback calculation
+    // Typical VRF cost = (callbackGasLimit + overhead) * gasPrice
+    const fallbackGasUsed = BigInt(callbackGasLimit) + 50000n;
+    const fallbackCost = fallbackGasUsed * safeMaxFeePerGas;
+    // Add extra 50% buffer for fallback since we're estimating
+    const fallbackCostWithBuffer = (fallbackCost * 150n) / 100n;
 
     return {
-      cost: baseCost,
+      cost: fallbackCostWithBuffer,
       maxFeePerGas: safeMaxFeePerGas,
       maxPriorityFeePerGas,
     };
@@ -1706,11 +1733,38 @@ export class PeetBetClient {
   // ═══════════════════════════════════════════════════════════════════
 
   /**
+   * Get token decimals from the contract.
+   * Cached after first call for efficiency.
+   *
+   * @returns Token decimals (typically 6 for USDC)
+   */
+  async getTokenDecimals(): Promise<number> {
+    if (this.tokenDecimalsCache !== null) {
+      return this.tokenDecimalsCache;
+    }
+
+    try {
+      const decimals = await this.publicClient.readContract({
+        address: this.contracts.token,
+        abi: erc20Abi,
+        functionName: "decimals",
+      }) as number;
+      this.tokenDecimalsCache = decimals;
+      return decimals;
+    } catch {
+      // Fallback to 6 (USDC standard)
+      this.tokenDecimalsCache = 6;
+      return 6;
+    }
+  }
+
+  /**
    * Format a token amount for display.
-   * Converts from raw units (6 decimals) to human-readable string.
+   * Converts from raw units to human-readable string.
+   * Uses cached decimals from the token contract.
    *
    * @param amount - Amount in raw units
-   * @param decimals - Token decimals (default: 6 for USDC)
+   * @param decimals - Token decimals (defaults to cached value or 6)
    * @returns Formatted string
    *
    * @example
@@ -1720,16 +1774,18 @@ export class PeetBetClient {
    * client.formatTokens(100n);      // "0.0001"
    * ```
    */
-  formatTokens(amount: bigint, decimals = 6): string {
-    return formatUnits(amount, decimals);
+  formatTokens(amount: bigint, decimals?: number): string {
+    const dec = decimals ?? this.tokenDecimalsCache ?? 6;
+    return formatUnits(amount, dec);
   }
 
   /**
    * Parse a token amount from a string.
-   * Converts from human-readable to raw units (6 decimals).
+   * Converts from human-readable to raw units.
+   * Uses cached decimals from the token contract.
    *
    * @param amount - Human-readable amount
-   * @param decimals - Token decimals (default: 6 for USDC)
+   * @param decimals - Token decimals (defaults to cached value or 6)
    * @returns Amount in raw units
    *
    * @example
@@ -1739,8 +1795,9 @@ export class PeetBetClient {
    * client.parseTokens("0.01"); // 10000n
    * ```
    */
-  parseTokens(amount: string, decimals = 6): bigint {
-    return parseUnits(amount, decimals);
+  parseTokens(amount: string, decimals?: number): bigint {
+    const dec = decimals ?? this.tokenDecimalsCache ?? 6;
+    return parseUnits(amount, dec);
   }
 
   /**

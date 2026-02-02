@@ -16,7 +16,7 @@ import { PeetBetClient } from '../src';
 // Configuration
 const PRIVATE_KEY = process.env.AGENT_PRIVATE_KEY as `0x${string}`;
 const CHAIN = 'baseSepolia' as const; // Use 'base' for mainnet
-const BET_AMOUNT = '1'; // 1 USDC
+const BET_AMOUNT = 1; // 1 USDC (simple number - SDK handles conversion)
 
 async function main() {
   // Validate environment
@@ -37,11 +37,11 @@ async function main() {
 
   // Check balance
   const balance = await agent.getBalance();
-  const betAmount = agent.parseTokens(BET_AMOUNT);
+  const betAmountUnits = agent.parseTokens(BET_AMOUNT.toString());
 
   console.log(`Balance: ${agent.formatTokens(balance)} USDC`);
 
-  if (balance < betAmount) {
+  if (balance < betAmountUnits) {
     console.error(`Insufficient balance. Need at least ${BET_AMOUNT} USDC`);
     process.exit(1);
   }
@@ -49,7 +49,7 @@ async function main() {
   // Strategy: Join existing room if available, otherwise create one
   console.log('\nLooking for rooms to join...');
 
-  const rooms = await agent.getFilteredCoinFlipRooms([betAmount]);
+  const rooms = await agent.getFilteredCoinFlipRooms([betAmountUnits]);
 
   if (rooms.items.length > 0) {
     // Join first available room
@@ -80,7 +80,7 @@ async function main() {
     // Create a new room
     console.log('No rooms found. Creating one...');
 
-    await agent.createCoinFlipRoom({ betAmount });
+    await agent.createCoinFlipRoom({ betAmount: BET_AMOUNT });
 
     const myRooms = await agent.getPlayerCoinFlipWaitingRooms();
     const roomId = myRooms[0];

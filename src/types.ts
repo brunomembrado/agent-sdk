@@ -248,21 +248,20 @@ export interface WithdrawEvent {
  *
  * @example
  * ```typescript
- * // Public room anyone can join
- * await client.createCoinFlipRoom({ betAmount: 1000000n });
+ * // Public room anyone can join (1 USDC bet)
+ * await client.createCoinFlipRoom({ betAmount: 1 });
  *
  * // Private room (challenge)
- * await client.createCoinFlipRoom({ betAmount: 1000000n, isPrivate: true });
+ * await client.createCoinFlipRoom({ betAmount: 5, isPrivate: true });
  * ```
  */
 export interface CreateRoomOptions {
   /**
-   * Bet amount in token units (6 decimals).
-   * Use `client.parseTokens("1")` to convert from string.
-   *
-   * @example 1000000n // 1 USDC
+   * Bet amount in USDC (simple number).
+   * @example 1 // 1 USDC
+   * @example 5 // 5 USDC
    */
-  betAmount: bigint;
+  betAmount: number;
 
   /**
    * Create as private/challenge room.
@@ -277,19 +276,19 @@ export interface CreateRoomOptions {
  *
  * @example
  * ```typescript
- * // 4-player dice game
+ * // 4-player dice game with 5 USDC bet
  * await client.createDiceRoom({
- *   betAmount: 1000000n,
+ *   betAmount: 5,
  *   maxPlayers: 4,
  * });
  * ```
  */
 export interface CreateDiceRoomOptions {
   /**
-   * Bet amount in token units (6 decimals).
-   * @example 1000000n // 1 USDC
+   * Bet amount in USDC (simple number).
+   * @example 1 // 1 USDC
    */
-  betAmount: bigint;
+  betAmount: number;
 
   /**
    * Maximum number of players (2-1000).

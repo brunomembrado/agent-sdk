@@ -1,6 +1,6 @@
 {
   "name": "@peetbet/agent-sdk",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Agent-first SDK for provably fair onchain betting. Chainlink VRF randomness, Base L2, zero CAPTCHAs. Built for autonomous agents and bots.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -14,7 +14,8 @@
   },
   "files": [
     "dist",
-    "examples"
+    "examples",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",

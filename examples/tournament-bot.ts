@@ -25,8 +25,8 @@ const CONFIG = {
   privateKey: process.env.AGENT_PRIVATE_KEY as `0x${string}`,
   chain: 'baseSepolia' as const, // Use 'base' for mainnet
 
-  // Strategy
-  betAmount: '1',           // USDC per game
+  // Strategy - use simple numbers (SDK handles conversion)
+  betAmount: 1,             // USDC per game (simple number)
   maxGames: 10,             // Maximum games to play (0 = unlimited)
   cooldownMs: 5000,         // Wait between games
 
@@ -88,12 +88,12 @@ async function main() {
 
   // Get starting balance
   stats.startingBalance = await agent.getBalance();
-  const betAmount = agent.parseTokens(CONFIG.betAmount);
+  const betAmountUnits = agent.parseTokens(CONFIG.betAmount.toString());
   const minBalance = agent.parseTokens(CONFIG.minBalance.toString());
 
   console.log(`Starting balance: ${agent.formatTokens(stats.startingBalance)} USDC\n`);
 
-  if (stats.startingBalance < betAmount) {
+  if (stats.startingBalance < betAmountUnits) {
     console.error('Insufficient balance to start');
     process.exit(1);
   }
@@ -141,18 +141,18 @@ async function main() {
     console.log(`P/L: ${profitLoss >= 0n ? '+' : ''}${agent.formatTokens(profitLoss)} USDC`);
 
     try {
-      const result = await playOneGame(agent, betAmount);
+      const result = await playOneGame(agent, betAmountUnits, CONFIG.betAmount);
 
       // Update stats
       stats.gamesPlayed++;
-      stats.totalWagered += betAmount;
+      stats.totalWagered += betAmountUnits;
 
       if (result.didIWin) {
         stats.wins++;
         stats.totalProfit += result.netChange;
       } else {
         stats.losses++;
-        stats.totalProfit -= betAmount;
+        stats.totalProfit -= betAmountUnits;
       }
 
       console.log(`Result: ${result.summary}`);
@@ -178,10 +178,11 @@ async function main() {
 
 async function playOneGame(
   agent: PeetBetClient,
-  betAmount: bigint
+  betAmountUnits: bigint,
+  betAmountSimple: number
 ): Promise<CoinFlipGameResult> {
   // Strategy: prefer joining existing rooms (faster)
-  const rooms = await agent.getFilteredCoinFlipRooms([betAmount]);
+  const rooms = await agent.getFilteredCoinFlipRooms([betAmountUnits]);
 
   let roomId: bigint;
 
@@ -191,9 +192,9 @@ async function playOneGame(
     console.log(`Joining room ${roomId}...`);
     await agent.joinCoinFlipRoom({ roomId });
   } else {
-    // Create new room
+    // Create new room - use simple number (SDK handles conversion)
     console.log('Creating room...');
-    await agent.createCoinFlipRoom({ betAmount });
+    await agent.createCoinFlipRoom({ betAmount: betAmountSimple });
     const myRooms = await agent.getPlayerCoinFlipWaitingRooms();
     roomId = myRooms[0];
     console.log(`Created room ${roomId}, waiting for opponent...`);

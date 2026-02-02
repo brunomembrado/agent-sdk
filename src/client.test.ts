@@ -23,7 +23,7 @@ vi.mock("viem", async () => {
 });
 
 vi.mock("viem/accounts", () => ({
-  privateKeyToAccount: vi.fn((key: string) => ({
+  privateKeyToAccount: vi.fn((_key: string) => ({
     address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
   })),
 }));
@@ -152,7 +152,7 @@ describe("PeetBetClient", () => {
         "Wallet not configured"
       );
       await expect(
-        client.createCoinFlipRoom({ betAmount: 1000000n })
+        client.createCoinFlipRoom({ betAmount: 1 })
       ).rejects.toThrow("Wallet not configured");
       await expect(client.joinCoinFlipRoom({ roomId: 1n })).rejects.toThrow(
         "Wallet not configured"
@@ -161,7 +161,7 @@ describe("PeetBetClient", () => {
         "Wallet not configured"
       );
       await expect(
-        client.createDiceRoom({ betAmount: 1000000n, maxPlayers: 4 })
+        client.createDiceRoom({ betAmount: 1, maxPlayers: 4 })
       ).rejects.toThrow("Wallet not configured");
       await expect(
         client.joinDiceRoom({ roomId: 1n, currentPlayers: 1, maxPlayers: 4 })

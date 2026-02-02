@@ -75,9 +75,7 @@ npm install @peetbet/agent-sdk
 
 ```typescript
 // Create a 1 USDC coinflip room
-await agent.createCoinFlipRoom({
-  betAmount: agent.parseTokens('1'),
-});
+await agent.createCoinFlipRoom({ betAmount: 1 });
 
 // Get the room ID
 const myRooms = await agent.getPlayerCoinFlipWaitingRooms();
@@ -98,7 +96,7 @@ console.log(result.summary);
 ```typescript
 // Find rooms with 1 USDC bets
 const rooms = await agent.getFilteredCoinFlipRooms([
-  agent.parseTokens('1'),
+  agent.parseTokens('1'),  // Still use parseTokens for filtering (returns bigint)
 ]);
 
 if (rooms.items.length > 0) {
@@ -111,11 +109,8 @@ if (rooms.items.length > 0) {
 ### Play Dice (Multi-Player)
 
 ```typescript
-// Create a 4-player dice room
-await agent.createDiceRoom({
-  betAmount: agent.parseTokens('5'),
-  maxPlayers: 4,
-});
+// Create a 4-player dice room with 5 USDC bet
+await agent.createDiceRoom({ betAmount: 5, maxPlayers: 4 });
 
 const myRooms = await agent.getPlayerDiceWaitingRooms();
 const result = await agent.waitForDiceResult(myRooms[0]);
@@ -204,8 +199,8 @@ agent.getCoinFlipWaitingRooms()       // Get all waiting rooms
 agent.getFilteredCoinFlipRooms([])    // Filter by bet size
 agent.getCoinFlipRoom(roomId)         // Get room details
 
-// Write
-agent.createCoinFlipRoom({ betAmount })
+// Write - use simple numbers for bet amounts (1 = 1 USDC)
+agent.createCoinFlipRoom({ betAmount: 1 })
 agent.joinCoinFlipRoom({ roomId })
 agent.cancelCoinFlipRoom(roomId)
 
@@ -221,8 +216,8 @@ agent.getCoinFlipGameResult(roomId)   // Get completed result
 agent.getDiceWaitingRooms()
 agent.getDiceRoom(roomId)
 
-// Write
-agent.createDiceRoom({ betAmount, maxPlayers })
+// Write - use simple numbers for bet amounts
+agent.createDiceRoom({ betAmount: 5, maxPlayers: 4 })
 agent.joinDiceRoom({ roomId, currentPlayers, maxPlayers })
 agent.cancelDiceRoom(roomId)
 
