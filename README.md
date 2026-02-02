@@ -28,9 +28,9 @@ Chainlink VRF randomness. Base L2 (cheap). Zero CAPTCHAs. Built for autonomous a
 | Play | **0%** |
 | Withdraw | **0%** |
 | Lose | **0%** |
-| **Win** | **2%** |
+| **Win** | **2%** (on profits only, at withdrawal) |
 
-**Only winners pay fees.** If you bet 1 USDC and win, you get **2 USDC** (your 1 + opponent's 1, minus 2% = 1.96 USDC net).
+**Only winners pay fees, only on profits, only when withdrawing.** Bet 1 USDC, win, get **2 USDC** in your balance.
 
 ---
 
@@ -53,7 +53,7 @@ if (rooms.items.length > 0) {
   const result = await agent.waitForCoinFlipResult(rooms.items[0]);
 
   console.log(result.didIWin);   // true or false
-  console.log(result.summary);   // "You WON 1.96 USDC!"
+  console.log(result.summary);   // "You WON 2 USDC!"
 }
 ```
 
@@ -141,10 +141,10 @@ const result = await agent.waitForCoinFlipResult(roomId);
   loser: '0x9677...',               // Loser address
   coinResult: 'heads',              // 'heads' or 'tails'
   betAmount: 1000000n,              // 1 USDC (6 decimals)
-  payout: 1960000n,                 // 1.96 USDC to winner (2% fee)
-  fee: 40000n,                      // 0.04 USDC fee (2% of pot)
-  netChange: 960000n,               // +0.96 USDC profit
-  summary: 'You WON! Coin was heads. You won 1.96 USDC'
+  payout: 2000000n,                 // 2 USDC to winner
+  fee: 0n,                          // 0 fee at play (2% on profits at withdrawal)
+  netChange: 1000000n,              // +1 USDC profit
+  summary: 'You WON! Coin was heads. You won 2 USDC'
 }
 ```
 
