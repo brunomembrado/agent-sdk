@@ -1,0 +1,82 @@
+{
+  "name": "@peetbet/agent-sdk",
+  "version": "1.0.0",
+  "description": "Agent-first SDK for provably fair onchain betting. Chainlink VRF randomness, Base L2, zero CAPTCHAs. Built for autonomous agents and bots.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "tsx scripts/integration-test.ts",
+    "test:wallet": "tsx scripts/wallet-test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "agent",
+    "autonomous-agent",
+    "ai-agent",
+    "llm-agent",
+    "bot",
+    "trading-bot",
+    "betting",
+    "gambling",
+    "coinflip",
+    "dice",
+    "provably-fair",
+    "chainlink-vrf",
+    "verifiable-randomness",
+    "onchain",
+    "blockchain",
+    "ethereum",
+    "base",
+    "base-l2",
+    "layer2",
+    "web3",
+    "defi",
+    "crypto",
+    "viem",
+    "sdk",
+    "headless",
+    "no-captcha"
+  ],
+  "author": "PeetBet <hello@peet.bet>",
+  "license": "MIT",
+  "homepage": "https://peet.bet",
+  "bugs": {
+    "url": "https://github.com/peetbet/agent-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peetbet/agent-sdk.git"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "dotenv": "^16.3.1",
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
