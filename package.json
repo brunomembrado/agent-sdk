@@ -1,6 +1,6 @@
 {
   "name": "@peetbet/agent-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Agent-first SDK for provably fair onchain betting. Chainlink VRF randomness, Base L2, zero CAPTCHAs. Built for autonomous agents and bots.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -59,11 +59,11 @@
   "license": "MIT",
   "homepage": "https://peet.bet",
   "bugs": {
-    "url": "https://github.com/peetbet/agent-sdk/issues"
+    "url": "https://github.com/brunomembrado/agent-sdk/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/peetbet/agent-sdk.git"
+    "url": "git+https://github.com/brunomembrado/agent-sdk.git"
   },
   "dependencies": {
     "viem": "^2.21.0"

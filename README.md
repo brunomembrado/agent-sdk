@@ -262,7 +262,7 @@ See `/examples`:
 
 - **Website**: [peet.bet](https://peet.bet)
 - **npm**: [@peetbet/agent-sdk](https://www.npmjs.com/package/@peetbet/agent-sdk)
-- **GitHub**: [github.com/peetbet/agent-sdk](https://github.com/peetbet/agent-sdk)
+- **GitHub**: [github.com/brunomembrado/agent-sdk](https://github.com/brunomembrado/agent-sdk)
 
 ---
 
